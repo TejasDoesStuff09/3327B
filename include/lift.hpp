@@ -1,19 +1,44 @@
 #pragma once
-#include "pros/motors.hpp"
+#include "pros/motor_group.hpp"
 
-class Lift{
+class Lift {
+    public:
+        /**
+         * @brief Lift constructor
+         *
+         * @param motors pointer to the motor group that drives the lift. The group is owned by the
+         * caller (usually a global in main.cpp), the Lift only borrows it, just like lemlib::Drivetrain
+         *
+         * @b Example
+         * @code {.cpp}
+         * pros::MotorGroup liftMotors({5, -6}, pros::MotorGears::red);
+         * Lift lift(&liftMotors);
+         * @endcode
+         */
+        Lift(pros::MotorGroup* motors);
 
-  private:
-    //I'm storing references to both lift motors so the class can control the motors that are already set up in the robot code instead of creating new motors.
-    pros::Motor& leftMotor;
-    pros::Motor& rightMotor;
+        /**
+         * @brief Set the current lift position as zero (the lowest position)
+         *
+         * Call this in initialize() with the lift resting at the bottom.
+         */
+        void tare();
 
-  public:
-    //This constructor takes in the two motors so I can connect them to the lift when I create the Lift object
-    Lift(pros::Motor& leftMotor, pros::Motor& rightMotor);
+        /**
+         * @brief Move the lift up or down by a number of inches
+         *
+         * @param inches distance to move, positive is up and negative is down
+         * @param velocity max motor velocity in RPM, 0 to 200 for a red cartridge
+         *
+         * @b Example
+         * @code {.cpp}
+         * lift.moveInches(6);  // up 6 inches
+         * lift.moveInches(-6); // back down
+         * @endcode
+         */
+        void moveInches(double inches, int velocity = 100);
 
-    //it takes a number of inches to move the lift. A positive number means up and a negative number means down.
-    void moveInches(double inches);
-
-
+    private:
+        // pointer, not a copy: the motors belong to main.cpp and we only borrow them
+        pros::MotorGroup* motors;
 };
