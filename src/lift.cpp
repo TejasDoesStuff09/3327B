@@ -1,7 +1,7 @@
 #include "lift.hpp"
-#include <algorithm>
-#include <cmath>
-#include <numeric>
+#include <algorithm> // std::clamp
+#include <cmath> //std::sin,asin
+#include <numeric>// std: accumulate(definite integration)
 
 // anonymous namespace: these constants are private to this file
 namespace {
@@ -18,6 +18,7 @@ void Lift::tare() { motors->tare_position_all(); }
 
 void Lift::moveInches(double inches, int velocity) {
     // the motors report degrees, average them in case the two sides are slightly different
+    // could cause problems if motors are PHYSICALLY NOT ALIGNED
     std::vector<double> positions = motors->get_position_all();
     if (positions.empty()) return; // no motors connected
     const double motorDegrees = std::accumulate(positions.begin(), positions.end(), 0.0) / positions.size();
@@ -35,5 +36,5 @@ void Lift::moveInches(double inches, int velocity) {
     const double targetAngle = std::asin(targetSin) * radToDeg;
     const double targetMotorDegrees = (targetAngle - settings.startingAngle) / settings.gearRatio;
 
-    motors->move_absolute(targetMotorDegrees, velocity);
+    motors->move_absolute(targetMotorDegrees, velocity); //pros control loop
 }
