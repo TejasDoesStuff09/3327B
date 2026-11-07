@@ -1,7 +1,7 @@
 #include "lift.hpp"
 #include <algorithm> // std::clamp
 #include <cmath> //std::sin,asin
-#include <numeric>// std: accumulate(definite integration)
+#include <numeric>// std: accumulate
 
 // anonymous namespace: these constants are private to this file
 namespace {
