@@ -36,7 +36,7 @@ State TrapezoidalProfile::trapezoidState(double t) const {
     // initialize pos, velocity, acceleration in a State
     State s{0.0, 0.0, 0.0};  
     //catch out of bound times
-    if (t>totalTime_) { return State {distance_*sign_, 0.0, 0.0}; }
+    if (t>=totalTime_) { return State {distance_*sign_, 0.0, 0.0}; }
     if (t<0) { t = 0;}
     //assume acceleration is either a constant positive value or a constant negative value, or zero,  depending on profile phase
     if (t<accelTime_) {
