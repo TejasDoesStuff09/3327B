@@ -1,5 +1,6 @@
 #include "main.h"
 #include "lemlib/api.hpp" // IWYU pragma: keep
+#include "snapper.hpp"
 
 // TODO: fill in ports, dimensions and PID values below.
 // Negative port numbers reverse that motor.
