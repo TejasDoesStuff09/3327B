@@ -57,6 +57,34 @@ lemlib::ControllerSettings angular_controller(2,   // kP
 
 // create the chassis
 lemlib::Chassis chassis(drivetrain, lateral_controller, angular_controller, sensors);
+Recorder recorder(
+    //set drivetrain voltage
+    [](double volts) {
+        pros::MotorGroup left_motors.move_voltage(volts * 1000);
+        pros::MotorGroup left_motors.move_voltage(volts * 1000);
+    },
+
+    //get drivetrain velocity
+    []() -> double {
+        //calculate from odometry position changes
+        //this will be implemented using previous position and time
+        return 0.0;
+    },
+
+    // Get current odometry position
+    []() -> FieldPoint {
+        lemlib::Pose pose = chassis.getPose();
+
+        return FieldPoint{
+            pose.x,
+            pose.y,
+            pose.theta
+        };
+    }
+);
+
+//running each test twice
+recorder.runAllTests(2,true);
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
