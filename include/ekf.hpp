@@ -69,3 +69,109 @@ inline const double cosine(const double theta) {
 inline const double sine(const double theta) {
     return std::sin(theta);
 }
+
+//----------------------------------------------------------------------------------------------------------
+//EKF STUFF
+//----------------------------------------------------------------------------------------------------------
+
+//3x3 matrix used for covariance P (how unsure we are about x and y)
+struct Matrix3 {
+    double m[3][3]; 
+};
+
+// function to create a 3x3 matrix with a,b,c down diagonal and zeros everywhere else
+Matrix3 diagonalMatrix(double a,double b,double c);
+
+// u_t: what the odometry says the robot did since the last timestep
+struct Motion {
+    double d; //signed distance the robot's vertical tracking wheel moved along the timestep
+    double dTheta;  //change in heading along the timestep, from imu
+};
+
+//wraps an angle into the range (-pi,pi)
+double wrapAngle(double angle);
+
+// ---------------------------------------
+// p(z|x): measurement model
+//  Real reading z is approximated as a bell curve centered on h(x). 
+//  This function returns variance R, of the bell curve
+//  It is modeled on the sensor's range as well as map error itself(field measurement tolerance)
+
+double measurmentNoise(double expectedInches);
+
+//---------------------------------------------------------------------------
+// p(x_t | x_t-1, u_t): the motion model
+//   predictPose:    where we think the robot is after moving u from pose x
+//   motionJacobian: F, how a small error in x gets carried through the move
+//   processNoise:   Q, extra uncertainty added by the move itself (wheel slip, drift)
+// ---------------------------------------------------------------------------
+Pose predictPose(const Pose& x, const Motion& u);
+Matrix3 motionJacobian(const Pose& x, const Motion& u);
+Matrix3 processNoise(const Motion& u);
+// ---------------------------------------------------------------------------
+// H: how much the expected reading h(x) changes when x, y, or theta is nudged.
+//   Found by nudging each one slightly and re-running expectedDistance.
+//   Returns false if a nudged pose has no valid reading (then skip the update).
+// ---------------------------------------------------------------------------
+bool measurementJacobian(const Pose& x, const SensorModel& sensor, double H[3]);
+
+// ---------------------------------------------------------------------------
+// The filter itself. It holds the belief: the pose x_ (best guess) and the
+// covariance P_ (how unsure we are).
+//
+// On the robot, every loop:
+//     ekf.predict({d, dTheta});                          // from the wheels and IMU
+//     ekf.update(0, mmToInches(frontSensor.get()));      // once per sensor reading
+// ---------------------------------------------------------------------------
+class Ekf {
+        public: 
+        // startPose: where we place the robot. bel(x_theta), formally. 
+        // startCovariance; how sure you are of that initial position
+        // The sensors and their maps are copied once here so the EKF owns them
+        Ekf(const Pose& startPose, const Matrix3& startCovariance, const std::vector<SensorModel>& sensors);
+
+        // the motion step. Moves the beleif forward using odometry
+        void predict(const Motion& u);
+
+        // the measurement step for one sensor. Returns true if reading was used, 
+        // false if it was skipped(no valid expected rading, out of range, or gated out)
+        bool update(int sensorIndex, double readingInches);
+        
+        //
+        Pose pose() const;
+        Matrix3 covariance() const;
+    private: 
+        Pose x_;
+        Matrix3 P_;
+        std::vector<SensorModel> sensors_;
+};
+
+// ---------------------------------------------------------------------------
+// Hardware conversions (the glue between PROS numbers and the units above)
+// ---------------------------------------------------------------------------
+double mmToInches(double millimeters);
+
+// distance a tracking wheel rolled, from its rotation in degrees
+double wheelRotationToInches(double rotationDegrees, double wheelDiameterInches);
+
+// distance the robot CENTER moved forward, from a vertical tracking wheel.
+//   wheelOffsetLeft: how far the wheel sits to the left of the robot center (negative if right).
+//   A wheel off the center rolls extra when the robot turns; this removes that.
+double forwardDistanceFromWheel(double wheelInches, double wheelOffsetLeft, double dTheta);
+
+// IMU heading (degrees, clockwise, 0 = facing the 0 degree wall) -> our theta (radians)
+double headingToTheta(double headingDegrees);
+// our theta (radians) -> IMU-style heading in degrees, 0 to 360
+double thetaToHeading(double thetaRadians);
+// change in IMU turn (degrees, clockwise = positive) -> our dTheta (radians, counter-clockwise = positive)
+double imuTurnToDTheta(double turnDegreesClockwise);
+
+
+//trig helper methods so there's less clutter
+inline const double cosine(const double theta) {
+    return std::cos(theta);
+}
+inline const double sine(const double theta) {
+    return std::sin(theta);
+}
+
